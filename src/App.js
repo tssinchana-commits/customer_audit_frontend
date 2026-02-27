@@ -4,6 +4,8 @@ import CustomerDetails from "./pages/CustomerDetails";
 import CustomerList from "./components/CustomerList";
 import "./App.css";
 
+const userRole = "Verification"; // Change to Representation/ Management to test 
+
 function App() {
   return (
     <div className="app-container">

@@ -5,52 +5,61 @@ import api from "../services/api";
 function CustomerManagement() {
   const navigate = useNavigate();
 
-  const [customers, setCustomers] = useState([
- 
-  ]);
-
-  useEffect(() => {
-  fetchCustomers();
-}, []);
-
-const fetchCustomers = () => {
-  api.get("/customer/api/v1/customers")
-    .then(res => setCustomers(res.data))
-    .catch(err => console.error(err));
-};
-
+  const [customers, setCustomers] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [newCustomer, setNewCustomer] = useState({
     name: "",
     phone: ""
   });
 
-  // 🔎 Search Logic
+  useEffect(() => {
+    fetchCustomers();
+  }, []);
+
+  const fetchCustomers = () => {
+    api.get("/customer/api/v1/customers")
+      .then(res => setCustomers(res.data))
+      .catch(err => console.error(err));
+  };
+
+  // ➕ Add Customer (FIXED TO USE FORM DATA)
+  const handleAddCustomer = async () => {
+    if (!newCustomer.name || !newCustomer.phone) {
+      alert("Please enter name and phone");
+      return;
+    }
+
+    try {
+      const formData = new FormData();
+
+      formData.append("name", newCustomer.name);
+      formData.append("phone", newCustomer.phone);
+      formData.append("status", "Active");
+      formData.append("kyc", "Pending");
+      formData.append("aadhaar", "");
+      formData.append("pan", "");
+
+      await api.post(
+        "/customer/api/v1/customers",
+        formData,
+        {
+          headers: { "Content-Type": "multipart/form-data" }
+        }
+      );
+
+      fetchCustomers();
+      setNewCustomer({ name: "", phone: "" });
+
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   const filteredCustomers = customers.filter(
     (customer) =>
       customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       customer.id.toString().includes(searchTerm)
   );
-
-  // ➕ Add Customer
-  const handleAddCustomer = () => {
-  if (!newCustomer.name || !newCustomer.phone) {
-    alert("Please enter name and phone");
-    return;
-  }
-
-  api.post("/customer/api/v1/customers", {
-    name: newCustomer.name,
-    phone: newCustomer.phone,
-    status: "Active",
-    kyc: "Pending"
-  })
-  .then(() => {
-    fetchCustomers();
-    setNewCustomer({ name: "", phone: "" });
-  })
-  .catch(err => console.error(err));
-};
 
   return (
     <div className="customer-management">
@@ -96,30 +105,27 @@ const fetchCustomers = () => {
             <th>Phone</th>
             <th>Status</th>
             <th>KYC</th>
+            <th>Actions</th>
           </tr>
         </thead>
 
         <tbody>
           {filteredCustomers.map((customer) => (
-            <tr
-             key={customer.id}
-            className="customer-row"
->
-            <td>{customer.id}</td>
-            <td>{customer.name}</td>
-            <td>{customer.phone}</td>
-            <td>{customer.status}</td>
-            <td>{customer.kyc}</td>
-
-                <td className="actions">
-                    <button
-                    onClick={() => navigate(`/customer/${customer.id}`)}
-                    className="edit-btn"
-                    >
-                    ✏ Edit
-                    </button>
-                </td>
-                </tr>
+            <tr key={customer.id} className="customer-row">
+              <td>{customer.id}</td>
+              <td>{customer.name}</td>
+              <td>{customer.phone}</td>
+              <td>{customer.status}</td>
+              <td>{customer.kyc}</td>
+              <td className="actions">
+                <button
+                  onClick={() => navigate(`/customer/${customer.id}`)}
+                  className="edit-btn"
+                >
+                  ✏ Edit
+                </button>
+              </td>
+            </tr>
           ))}
         </tbody>
       </table>

@@ -7,41 +7,91 @@ function CustomerDetails() {
   const navigate = useNavigate();
 
   const [customer, setCustomer] = useState(null);
-  const [viewMode, setViewMode] = useState(true); // VIEW or EDIT
+  const [viewMode, setViewMode] = useState(true);
+  const [selectedFile, setSelectedFile] = useState(null);
+
+  // 🔹 TEMP ROLE (change to test)
+  const userRole = "VERIFICATION"; 
+  // REPRESENTATIVE / VERIFICATION / MANAGER
+
+  // 🔹 Fetch Customer
+  const fetchCustomer = async () => {
+    try {
+      const res = await api.get(`/customer/api/v1/customers/${id}`);
+      setCustomer(res.data);
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   useEffect(() => {
     fetchCustomer();
-  }, []);
+  }, [id]);
 
-  const fetchCustomer = () => {
-    api
-      .get(`/customer/api/v1/customers/${id}`)
-      .then((res) => setCustomer(res.data))
-      .catch((err) => console.error(err));
+  // 🔹 STATUS UPDATE FUNCTION
+  const updateStatus = async (newStatus) => {
+  try {
+    await api.put(
+      `/customer/api/v1/customers/${id}/status`,
+      {
+        status: newStatus,
+        role: userRole,
+        username: "Sinchana",
+        remarks: "Updated via UI"
+      }
+    );
+
+    alert("Status Updated Successfully");
+    fetchCustomer();
+
+  } catch (error) {
+    console.error(error);
+  }
+};
+
+  const handleDelete = async () => {
+    try {
+      await api.delete(`/customer/api/v1/customers/${id}`);
+      navigate("/");
+    } catch (err) {
+      console.error(err);
+    }
   };
 
-  const handleDelete = () => {
-    api
-      .delete(`/customer/api/v1/customers/${id}`)
-      .then(() => navigate("/"))
-      .catch((err) => console.error(err));
-  };
+  const handleUpdate = async () => {
+    try {
+      const formData = new FormData();
 
-  const handleUpdate = () => {
-    api
-      .put(`/customer/api/v1/customers/${id}`, customer)
-      .then(() => {
-        alert("Customer Updated");
-        setViewMode(true); // back to view mode
-      })
-      .catch((err) => console.error(err));
+      formData.append("name", customer.name || "");
+      formData.append("phone", customer.phone || "");
+      formData.append("kyc", customer.kyc || "");
+      formData.append("aadhaar", customer.aadhaar || "");
+      formData.append("pan", customer.pan || "");
+
+      if (selectedFile) {
+        formData.append("photo", selectedFile);
+      }
+
+      await api.put(
+        `/customer/api/v1/customers/${id}`,
+        formData,
+        { headers: { "Content-Type": "multipart/form-data" } }
+      );
+
+      alert("Customer Updated");
+      fetchCustomer();
+      setViewMode(true);
+      setSelectedFile(null);
+
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   if (!customer) return <div>Loading...</div>;
 
   return (
     <div style={styles.container}>
-      {/* HEADER */}
       <div style={styles.header}>
         <h2>CUSTOMER: {customer.name}</h2>
       </div>
@@ -52,114 +102,176 @@ function CustomerDetails() {
           <div style={styles.photoBox}>
             {customer.photo ? (
               <img
-                src={customer.photo}
+                src={`http://localhost:8081/uploads/${customer.photo}`}
                 alt="customer"
-                style={{ width: "100%", height: "100%", borderRadius: "8px" }}
+                style={styles.image}
               />
             ) : (
-              <p style={{ textAlign: "center", marginTop: "40%" }}>PHOTO</p>
+              <p style={styles.noPhoto}>No Photo</p>
             )}
           </div>
 
           <div style={styles.details}>
             <Detail label="Name" value={customer.name} />
             <Detail label="Phone" value={customer.phone} />
-            <Detail label="Status" value={customer.status} />
+            <Detail label="Status" value={customer.customerStatus} />
             <Detail label="KYC" value={customer.kyc} />
             <Detail label="Aadhaar" value={customer.aadhaar} />
             <Detail label="PAN" value={customer.pan} />
-            <Detail label="Email" value={customer.email} />
+
+            {/* 🔹 Audit Info */}
+            <hr />
+            <h3>Status Info</h3>
+            <Detail label="Created By" value={customer.createdBy} />
+            <Detail label="Verified By" value={customer.verifiedBy} />
+            <Detail label="Approved By" value={customer.approvedBy} />
+            <Detail label="Verified At" value={customer.verifiedAt} />
+            <Detail label="Approved At" value={customer.approvedAt} />
+            <Detail label="Remarks" value={customer.remarks} />
+
+
+            {/* 🔹 ROLE BASED BUTTONS */}
+
+{customer.customerStatus === "SUBMITTED" && userRole === "VERIFICATION" && (
+  <div style={styles.buttonGroup}>
+  <button onClick={() => updateStatus("VERIFIED")}>
+    Verify
+  </button>
+
+  <button onClick={() => updateStatus("REJECTED")}>
+    Reject
+  </button>
+</div>
+)}
+
+{customer.customerStatus === "VERIFIED" && userRole === "MANAGER" && (
+  <div style={styles.buttonGroup}>
+  <button onClick={() => updateStatus("VERIFIED")}>
+    Verify
+  </button>
+
+  <button onClick={() => updateStatus("REJECTED")}>
+    Reject
+  </button>
+</div>
+)}
+
+{customer.customerStatus === "REJECTED" && userRole === "VERIFICATION" && (
+  <div style={styles.buttonGroup}>
+  <button onClick={() => updateStatus("VERIFIED")}>
+    Verify
+  </button>
+</div>
+)}
+
+            {customer.customerStatus === "SUBMITTED" && userRole === "VERIFICATION" && (
+              <>
+                <button onClick={() => updateStatus("VERIFIED")}>
+                  Approve
+                </button>
+
+                <button
+                  style={{ marginLeft: "10px" }}
+                  onClick={() => updateStatus("REJECTED")}
+                >
+                  Reject
+                </button>
+              </>
+            )}
+
+            {customer.customerStatus === "VERIFIED" && userRole === "MANAGER" && (
+              <>
+                <button onClick={() => updateStatus("ACTIVE")}>
+                  Final Approve
+                </button>
+
+                <button
+                  style={{ marginLeft: "10px" }}
+                  onClick={() => updateStatus("MANAGER_REJECTED")}
+                >
+                  Reject
+                </button>
+              </>
+            )}
+
+            {userRole === "REPRESENTATIVE" && customer.status !== "SUBMITTED" && (
+              <button onClick={() => updateStatus("SUBMITTED")}>
+                Submit
+              </button>
+            )}
           </div>
         </div>
       )}
 
-      {/* EDIT MODE */}
-      {!viewMode && (
-        <div style={{ padding: "20px" }}>
-          <h3>Edit Customer</h3>
+     {/* EDIT MODE */}
+{!viewMode && (
+  <div style={styles.editContainer}>
+    <h3>Edit Customer</h3>
 
-          <input
-            type="text"
-            placeholder="Name"
-            value={customer.name || ""}
-            onChange={(e) =>
-              setCustomer({ ...customer, name: e.target.value })
-            }
-          />
+    <label>Name</label>
+    <input
+      type="text"
+      value={customer.name || ""}
+      onChange={(e) =>
+        setCustomer({ ...customer, name: e.target.value })
+      }
+    />
 
-          <input
-            type="text"
-            placeholder="Phone"
-            value={customer.phone || ""}
-            onChange={(e) =>
-              setCustomer({ ...customer, phone: e.target.value })
-            }
-          />
+    <label>Phone</label>
+    <input
+      type="text"
+      value={customer.phone || ""}
+      onChange={(e) =>
+        setCustomer({ ...customer, phone: e.target.value })
+      }
+    />
 
-          <label>Status</label>
-          <select
-            value={customer.status || ""}
-            onChange={(e) =>
-              setCustomer({ ...customer, status: e.target.value })
-            }
-          >
-            <option value="">Select Status</option>
-            <option value="Active">Active</option>
-            <option value="Inactive">Inactive</option>
-          </select>
+    <label>KYC</label>
+    <input
+      type="text"
+      value={customer.kyc || ""}
+      onChange={(e) =>
+        setCustomer({ ...customer, kyc: e.target.value })
+      }
+    />
 
-          <input
-            type="text"
-            placeholder="KYC"
-            value={customer.kyc || ""}
-            onChange={(e) =>
-              setCustomer({ ...customer, kyc: e.target.value })
-            }
-          />
+    <label>Aadhaar</label>
+    <input
+      type="text"
+      value={customer.aadhaar || ""}
+      onChange={(e) =>
+        setCustomer({ ...customer, aadhaar: e.target.value })
+      }
+    />
 
-          <input
-            type="text"
-            placeholder="Aadhaar"
-            value={customer.aadhaar || ""}
-            onChange={(e) =>
-              setCustomer({ ...customer, aadhaar: e.target.value })
-            }
-          />
+    <label>PAN</label>
+    <input
+      type="text"
+      value={customer.pan || ""}
+      onChange={(e) =>
+        setCustomer({ ...customer, pan: e.target.value })
+      }
+    />
 
-          <input
-            type="text"
-            placeholder="PAN"
-            value={customer.pan || ""}
-            onChange={(e) =>
-              setCustomer({ ...customer, pan: e.target.value })
-            }
-          />
+    <label>Upload Photo</label>
+    <input
+      type="file"
+      onChange={(e) => setSelectedFile(e.target.files[0])}
+    />
 
-          <input
-            type="text"
-            placeholder="Photo URL"
-            value={customer.photo || ""}
-            onChange={(e) =>
-              setCustomer({ ...customer, photo: e.target.value })
-            }
-          />
+    <br /><br />
 
-          <br />
-          <br />
+    <button onClick={handleUpdate}>Save</button>
+    <button onClick={() => setViewMode(true)}>Cancel</button>
+  </div>
+)}
 
-          <button onClick={handleUpdate}>Save</button>
-          <button onClick={() => setViewMode(true)}>Cancel</button>
-        </div>
-      )}
-
-      {/* CONTROLS */}
-      <div style={{ textAlign: "center", marginTop: "20px" }}>
+      <div style={styles.footerButtons}>
         <button onClick={() => setViewMode(!viewMode)}>
           {viewMode ? "Edit" : "Back to View"}
         </button>
-        <button onClick={handleDelete} style={{ marginLeft: "10px" }}>
-          Delete
-        </button>
+
+        <button onClick={handleDelete}>Delete</button>
       </div>
     </div>
   );
@@ -167,38 +279,79 @@ function CustomerDetails() {
 
 const Detail = ({ label, value }) => (
   <p>
-    <strong>{label}: </strong> {value}
+    <strong>{label}:</strong> {value || "-"}
   </p>
 );
 
 const styles = {
   container: {
-    border: "1px solid #0da6c5",
-    borderRadius: "4px",
     width: "80%",
-    margin: "20px auto",
-    fontFamily: "Arial",
+    margin: "30px auto",
+    fontFamily: "Arial"
   },
+
   header: {
-    backgroundColor: "#028dc5",
+    background: "#028dc5",
     padding: "15px",
     color: "white",
-    textAlign: "center",
+    borderRadius: "5px"
   },
+
   content: {
     display: "flex",
+    gap: "40px",
     padding: "30px",
+    background: "#f9f9f9",
+    borderRadius: "5px"
   },
+
   photoBox: {
     width: "200px",
     height: "200px",
-    backgroundColor: "#c6eefd",
-    marginRight: "40px",
+    border: "1px solid #ccc",
     borderRadius: "8px",
+    overflow: "hidden"
   },
+
+  image: {
+    width: "100%",
+    height: "100%",
+    objectFit: "cover"
+  },
+
+  noPhoto: {
+    textAlign: "center",
+    marginTop: "80px",
+    color: "gray"
+  },
+
   details: {
     flex: 1,
+    display: "flex",
+    flexDirection: "column",
+    gap: "8px"
   },
+
+  buttonGroup: {
+    marginTop: "15px",
+    display: "flex",
+    gap: "10px"
+  },
+
+  editContainer: {
+    padding: "30px",
+    background: "#f5f5f5",
+    borderRadius: "5px"
+  },
+
+  footerButtons: {
+    textAlign: "center",
+    marginTop: "20px",
+    display: "flex",
+    justifyContent: "center",
+    gap: "15px"
+  }
 };
 
+    
 export default CustomerDetails;
