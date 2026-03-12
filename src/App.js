@@ -1,33 +1,59 @@
+import React from "react";
 import { Routes, Route } from "react-router-dom";
-import CustomerManagement from "./pages/CustomerManagement";
-import CustomerDetails from "./pages/CustomerDetails";
-import CustomerList from "./components/CustomerList";
-import "./App.css";
 
-const userRole = "Verification"; // Change to Representation/ Management to test 
+import Login from "./pages/Login";
+import CustomerManagement from "./pages/CustomerManagement";
+import AddCustomer from "./pages/AddCustomer";
+import CustomerDetails from "./pages/CustomerDetails";
+import EditCustomer from "./components/EditCustomer";
+import ProtectedRoute from "./utils/ProtectedRoute";
 
 function App() {
+
   return (
-    <div className="app-container">
 
-      {/* Common Header Wrapper */}
-      <div className="top-bar">
-        <div className="header-title">
-          Life Saver Microfinance
-        </div>
-      </div>
+    <Routes>
 
-      {/* Page Content */}
-      <div className="page-content">
-        <Routes>
-          <Route path="/" element={<CustomerManagement />} />
-          <Route path="/customer/:id" element={<CustomerDetails />} />
-        </Routes>
-      </div>
+      <Route path="/" element={<Login />} />
 
-    
+      <Route
+        path="/customers"
+        element={
+          <ProtectedRoute allowedRoles={["ADMIN","VERIFIER","MANAGER","REPRESENTATIVE"]}>
+            <CustomerManagement />
+          </ProtectedRoute>
+        }
+      />
 
-    </div>
+      <Route
+        path="/add"
+        element={
+          <ProtectedRoute allowedRoles={["REPRESENTATIVE","ADMIN"]}>
+            <AddCustomer />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/customer/:id"
+        element={
+          <ProtectedRoute allowedRoles={["VERIFIER","MANAGER","ADMIN"]}>
+            <CustomerDetails />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/customer/:id/edit"
+        element={
+          <ProtectedRoute allowedRoles={["REPRESENTATIVE","ADMIN"]}>
+            <EditCustomer />
+          </ProtectedRoute>
+        }
+      />
+
+    </Routes>
+
   );
 }
 

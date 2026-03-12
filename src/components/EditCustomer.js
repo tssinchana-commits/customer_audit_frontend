@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
 import { useParams, useNavigate } from "react-router-dom";
+import api from "../services/api";
 
 const EditCustomer = () => {
   const { id } = useParams();
@@ -19,7 +19,7 @@ const EditCustomer = () => {
 
   // 🔹 Fetch existing customer data
   useEffect(() => {
-    axios
+      api
       .get(`http://localhost:8081/customer/api/v1/customers/${id}`)
       .then((res) => {
         setCustomer(res.data);
@@ -59,7 +59,7 @@ const EditCustomer = () => {
     }
 
     try {
-      await axios.put(
+      await api.put(
         `http://localhost:8081/customer/api/v1/customers/${id}`,
         formData,
         {
@@ -70,7 +70,7 @@ const EditCustomer = () => {
       );
 
       alert("Customer updated successfully!");
-      navigate("/customers"); // change if your route is different
+      navigate("/"); // change if your route is different
     } catch (error) {
       console.error("Update error:", error);
       alert("Error updating customer");

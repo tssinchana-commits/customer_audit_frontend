@@ -1,136 +1,240 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../services/api";
+import { canAddCustomer, canEditCustomer } from "../utils/permissions"; 
+import { getUserRole } from "../utils/auth";
+import { isTokenExpired, logout } from "../utils/auth";
+import Navbar from "../components/Navbar";
 
 function CustomerManagement() {
-  const navigate = useNavigate();
 
   const [customers, setCustomers] = useState([]);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [newCustomer, setNewCustomer] = useState({
-    name: "",
-    phone: ""
-  });
+
+  const navigate = useNavigate();
+  const role = getUserRole();
+  const selectedRole = localStorage.getItem("role");
 
   useEffect(() => {
-    fetchCustomers();
-  }, []);
 
-  const fetchCustomers = () => {
-    api.get("/customer/api/v1/customers")
-      .then(res => setCustomers(res.data))
-      .catch(err => console.error(err));
-  };
-
-  // ➕ Add Customer (FIXED TO USE FORM DATA)
-  const handleAddCustomer = async () => {
-    if (!newCustomer.name || !newCustomer.phone) {
-      alert("Please enter name and phone");
+    if (isTokenExpired()) {
+      alert("Session expired. Please login again.");
+      logout();
+      navigate("/");
       return;
     }
 
-    try {
-      const formData = new FormData();
+    fetchCustomers();
 
-      formData.append("name", newCustomer.name);
-      formData.append("phone", newCustomer.phone);
-      formData.append("status", "Active");
-      formData.append("kyc", "Pending");
-      formData.append("aadhaar", "");
-      formData.append("pan", "");
+  }, []);
 
-      await api.post(
-        "/customer/api/v1/customers",
-        formData,
-        {
-          headers: { "Content-Type": "multipart/form-data" }
-        }
-      );
-
-      fetchCustomers();
-      setNewCustomer({ name: "", phone: "" });
-
-    } catch (err) {
-      console.error(err);
-    }
+  const fetchCustomers = () => {
+    api
+      .get("/customer/api/v1/customers")
+      .then((res) => {
+        setCustomers(res.data);
+      })
+      .catch((err) => {
+        console.error("Error fetching customers:", err);
+      });
   };
 
-  const filteredCustomers = customers.filter(
-    (customer) =>
-      customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      customer.id.toString().includes(searchTerm)
-  );
+  // ✅ FILTER CUSTOMERS BASED ON ROLE
+  const getFilteredCustomers = () => {
+
+    if (role === "VERIFIER") {
+      return customers.filter(
+        (c) => c.customerStatus === "CREATED"
+      );
+    }
+
+    if (role === "MANAGER") {
+      return customers.filter(
+        (c) => c.customerStatus === "VERIFIED"
+      );
+    }
+
+    if (role === "REPRESENTATIVE") {
+      return customers;
+    }
+
+    return customers;
+  };
+
+  const filteredCustomers = getFilteredCustomers();
+
+
+  const getStatusBadge = (status) => {
+
+  const style = {
+    padding: "4px 10px",
+    borderRadius: "12px",
+    color: "white",
+    fontSize: "12px",
+    fontWeight: "bold"
+  };
+
+  switch (status) {
+
+    case "CREATED":
+    case "SUBMITTED":
+      return <span style={{...style, background:"#f39c12"}}>{status}</span>;
+
+    case "VERIFIED":
+      return <span style={{...style, background:"#3498db"}}>{status}</span>;
+
+    case "ACTIVE":
+      return <span style={{...style, background:"#2ecc71"}}>{status}</span>;
+
+    case "REJECTED":
+      return <span style={{...style, background:"#e74c3c"}}>{status}</span>;
+
+    default:
+      return <span>{status}</span>;
+  }
+
+};
 
   return (
-    <div className="customer-management">
 
-      {/* 🔍 Search + Add Section */}
-      <div className="top-bar">
-        <input
-          type="text"
-          placeholder="Search by ID or Name..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
+    <div>
 
-        <input
-          type="text"
-          placeholder="Customer Name"
-          value={newCustomer.name}
-          onChange={(e) =>
-            setNewCustomer({ ...newCustomer, name: e.target.value })
-          }
-        />
+      <Navbar />
 
-        <input
-          type="text"
-          placeholder="Phone Number"
-          value={newCustomer.phone}
-          onChange={(e) =>
-            setNewCustomer({ ...newCustomer, phone: e.target.value })
-          }
-        />
+      <div style={{ width: "90%", margin: "40px auto" }}>
 
-        <button className="add-btn" onClick={handleAddCustomer}>
-          ➕ Add
-        </button>
+        {/* ⭐ NEW HEADER SECTION */}
+        <div style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: "20px"
+        }}>
+
+          
+
+        </div>
+
+        <h2>Customer Management</h2>
+
+        {/* ✅ TOP SECTION */}
+        <div style={{
+          display: "flex",
+          justifyContent: "space-between",
+          marginBottom: "20px"
+        }}>
+
+          {/* RIGHT SIDE BUTTONS */}
+          <div>
+
+            {canAddCustomer(role) && (
+
+              <button
+                onClick={() => navigate("/add")}
+                style={{
+                  background: "#2ecc71",
+                  color: "white",
+                  border: "none",
+                  padding: "8px 15px",
+                  borderRadius: "5px",
+                  cursor: "pointer",
+                  marginRight: "10px"
+                }}
+              >
+                + Add New Customer
+              </button>
+
+            )}
+
+          </div>
+
+        </div>
+
+        {/* ✅ TABLE */}
+        <table
+          border="1"
+          width="100%"
+          cellPadding="10"
+          style={{ borderCollapse: "collapse" }}
+        >
+
+          <thead style={{ background: "#f0f0f0" }}>
+
+            <tr>
+              <th>ID</th>
+              <th>Name</th>
+              <th>Phone</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+
+          </thead>
+
+          <tbody>
+
+            {filteredCustomers.length === 0 ? (
+
+              <tr>
+                <td colSpan="5" align="center">
+                  No Customers Available For {role}
+                </td>
+              </tr>
+
+            ) : (
+
+              filteredCustomers.map((customer) => (
+
+                <tr key={customer.id}>
+
+                  <td>{customer.id}</td>
+                  <td>{customer.name}</td>
+                  <td>{customer.phone}</td>
+                  <td>{getStatusBadge(customer.customerStatus)}</td>
+
+                  <td>
+
+                    <button
+                      onClick={() =>
+                        navigate(`/customer/${customer.id}`, {
+                          state: { role: role }
+                        })
+                      }
+                    >
+                      View
+                    </button>
+
+                    {canEditCustomer(role) && (
+
+                      <button
+                        style={{ marginLeft: "10px" }}
+                        onClick={() =>
+                          navigate(`/customer/${customer.id}/edit`, {
+                            state: { role: role }
+                          })
+                        }
+                      >
+                        Edit
+                      </button>
+
+                    )}
+
+                  </td>
+
+                </tr>
+
+              ))
+
+            )}
+
+          </tbody>
+
+        </table>
+
       </div>
 
-      {/* 📋 Customer Table */}
-      <table className="customer-table">
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Name</th>
-            <th>Phone</th>
-            <th>Status</th>
-            <th>KYC</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-
-        <tbody>
-          {filteredCustomers.map((customer) => (
-            <tr key={customer.id} className="customer-row">
-              <td>{customer.id}</td>
-              <td>{customer.name}</td>
-              <td>{customer.phone}</td>
-              <td>{customer.status}</td>
-              <td>{customer.kyc}</td>
-              <td className="actions">
-                <button
-                  onClick={() => navigate(`/customer/${customer.id}`)}
-                  className="edit-btn"
-                >
-                  ✏ Edit
-                </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
     </div>
+
   );
+
 }
 
 export default CustomerManagement;
