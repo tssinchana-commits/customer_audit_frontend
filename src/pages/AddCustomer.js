@@ -152,6 +152,7 @@ function AddCustomer() {
           Cancel
         </button>
 
+<button onClick={() => navigate(-1)}>⬅ Back</button>
       </form>
     </div>
   );

@@ -7,6 +7,10 @@ import AddCustomer from "./pages/AddCustomer";
 import CustomerDetails from "./pages/CustomerDetails";
 import EditCustomer from "./components/EditCustomer";
 import ProtectedRoute from "./utils/ProtectedRoute";
+import AccountsTable from "./pages/AccountsTable";
+import AccountTransactions from "./pages/AccountTransactions";
+import LoanPage from "./pages/LoanPage";
+import ApplyLoanPage from "./pages/ApplyLoanPage";
 
 function App() {
 
@@ -51,6 +55,27 @@ function App() {
           </ProtectedRoute>
         }
       />
+
+<Route path="/" element={<Login />} />
+
+        {/* ACCOUNTS PAGE (PROTECTED WITH ROLE) */}
+        <Route
+          path="/accounts/:accountNumber"
+          element={
+            <ProtectedRoute allowedRoles={["ADMIN", "MANAGER"]}>
+              <AccountsTable />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+  path="/transactions/:accountNumber"
+  element={<AccountTransactions />}
+/>
+
+<Route path="/apply-loan/:accountNumber" element={<ApplyLoanPage />} />
+
+<Route path="/loans/:accountNumber" element={<LoanPage />} />
 
     </Routes>
 

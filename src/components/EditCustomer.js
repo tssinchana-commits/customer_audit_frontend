@@ -140,8 +140,10 @@ const EditCustomer = () => {
         />
 
         <button type="submit">Update</button>
+        <button onClick={() => navigate(-1)}>⬅ Back</button>
       </form>
     </div>
+    
   );
 };
 
