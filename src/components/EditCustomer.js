@@ -20,7 +20,7 @@ const EditCustomer = () => {
   // 🔹 Fetch existing customer data
   useEffect(() => {
       api
-      .get(`http://localhost:8081/customer/api/v1/customers/${id}`)
+      .get(`/customer/api/v1/customers/${id}`)
       .then((res) => {
         setCustomer(res.data);
       })
@@ -60,7 +60,7 @@ const EditCustomer = () => {
 
     try {
       await api.put(
-        `http://localhost:8081/customer/api/v1/customers/${id}`,
+        `/customer/api/v1/customers/${id}`,
         formData,
         {
           headers: {
